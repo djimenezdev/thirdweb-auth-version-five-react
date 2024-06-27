@@ -1,5 +1,8 @@
+import { Interface } from "ethers";
+import { parseUnits } from "ethers";
 import { checksumAddress } from "thirdweb/utils";
 import { v7 as uuidv7 } from "uuid";
+import { events } from "./signature";
 
 export const getListingData = async () => {
   // function returns a set address for the listing data
@@ -55,7 +58,6 @@ export async function get({ url, params, headers }) {
 }
 
 export async function post({ url, params, headers }) {
-  console.log(JSON.stringify(params ?? {}));
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -85,4 +87,26 @@ Issued At: ${payload.issued_at}
 Expiration Time: ${payload.expiration_time}
 Not Before: ${payload.invalid_before}
   `;
+};
+
+export const getUnits = (num, decimals = 6) => {
+  return parseUnits(num.toString(), decimals);
+};
+
+export const decodeLogs = (abi, logs) => {
+  const interfaceContract = new Interface(abi);
+
+  Object.values(events).forEach((event) => {
+    logs.forEach((log) => {
+      if (event.hash !== log.topics[0]) return;
+      const decodedLog = interfaceContract.decodeEventLog(
+        event.name,
+        log.data,
+        log.topics
+      );
+      decodedLog.forEach((val) => {
+        console.log(val);
+      });
+    });
+  });
 };

@@ -15,3 +15,15 @@
 .signData__container {
   margin-top: 20px;
 }
+
+.units {
+  margin-top: 20px;
+}
+
+.units > p {
+  margin-top: 10px;
+}
+
+.transactionTest {
+  margin-top: 20px;
+}

@@ -44,14 +44,8 @@ function SignData({ polygon }) {
               chainId: polygon.id.toString(),
             },
           });
+
           // sign payload
-
-          /* const formattedMessage = signatureMessageFormat(messagePayload);
-
-          const signedPayload = await activeAccount.signMessage({
-            message: formattedMessage,
-          }); */
-
           const signatureWithPayload = await signLoginPayload({
             payload: messagePayload,
             account: activeAccount,
@@ -70,13 +64,6 @@ function SignData({ polygon }) {
           console.log("Now logged in: ", isLoggedIn);
         } else {
           console.log("Logged in");
-        }
-      } else {
-        console.log("No active account");
-        if (isLoggedIn) {
-          await post({
-            url: environment.VITE_API_URL + "/logout",
-          });
         }
       }
     })();

@@ -104,9 +104,7 @@ export const decodeLogs = (abi, logs) => {
         log.data,
         log.topics
       );
-      decodedLog.forEach((val) => {
-        console.log(val);
-      });
+      console.log(decodedLog.toObject());
     });
   });
 };

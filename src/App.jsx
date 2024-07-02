@@ -1,51 +1,20 @@
-import Web3Provider from "./Web3Provider";
 import { ConnectButton } from "thirdweb/react";
-import { createWallet, walletConnect, inAppWallet } from "thirdweb/wallets";
 import SignData from "./SignData";
 import environment from "./environment";
 import GetUnits from "./GetUnits";
-import { polygon, sepolia } from "thirdweb/chains";
-import { client } from "./thirdweb";
+import { polygon, polygonAmoy } from "thirdweb/chains";
+import {
+  client,
+  coinbase,
+  inAppWalletInit,
+  metaMask,
+  trustWallet,
+  walletConnectInit,
+} from "./thirdweb";
 import TransactionTest from "./TransactionTest";
-import { post } from "./helpers";
-
-const metaMask = createWallet("io.metamask");
-const coinbase = createWallet("com.coinbase.wallet");
-const trustWallet = createWallet("com.trustwallet.app");
-const walletConnectInit = walletConnect();
-const inAppWalletInit = inAppWallet({
-  auth: {
-    options: ["email", "google", "phone"],
-  },
-});
-
-metaMask.subscribe("disconnect", async () => {
-  await post({
-    url: environment.VITE_API_URL + "/logout",
-  });
-  console.log("Metamask disconnected");
-});
-
-coinbase.subscribe("disconnect", async () => {
-  await post({
-    url: environment.VITE_API_URL + "/logout",
-  });
-  console.log("Coinbase disconnected");
-});
-
-trustWallet.subscribe("disconnect", async () => {
-  await post({
-    url: environment.VITE_API_URL + "/logout",
-  });
-  console.log("Trust Wallet disconnected");
-});
-
-walletConnectInit.subscribe("disconnect", async () => {
-  await post({
-    url: environment.VITE_API_URL + "/logout",
-  });
-  console.log("Wallet Connect disconnected");
-});
+import { get, post } from "./helpers";
+import { useEffect } from "react";
+import { signLoginPayload } from "thirdweb/auth";
 
 const wallets = [
   metaMask,
@@ -56,55 +25,103 @@ const wallets = [
 ];
 
 function App() {
+  useEffect(() => {
+    metaMask.subscribe("disconnect", async () => {
+      await post({
+        url: environment.VITE_API_URL + "/logout",
+      });
+      console.log("Metamask disconnected");
+    });
+    // need to use accounts changed to handle account change
+    metaMask.subscribe("accountsChanged", async () => {
+      console.log("Metamask accounts changed");
+    });
+
+    coinbase.subscribe("disconnect", async () => {
+      console.log("Coinbase disconnecting");
+      await post({
+        url: environment.VITE_API_URL + "/logout",
+      });
+      console.log("Coinbase disconnected");
+    });
+
+    trustWallet.subscribe("disconnect", async () => {
+      await post({
+        url: environment.VITE_API_URL + "/logout",
+      });
+      console.log("Trust Wallet disconnected");
+    });
+
+    walletConnectInit.subscribe("disconnect", async () => {
+      await post({
+        url: environment.VITE_API_URL + "/logout",
+      });
+      console.log("Wallet Connect disconnected");
+    });
+  }, []);
+
   return (
-    <Web3Provider>
-      <div className="connect__container">
-        <ConnectButton
-          client={client}
-          wallets={wallets}
-          theme={"dark"}
-          connectModal={{ size: "wide" }}
-          showAllWallets={false}
-          recommendedWallets={[wallets[0]]}
-          chain={environment.VITE_ACTIVE_CHAIN === "137" ? polygon : sepolia}
-          onDisconnect={async () => {
-            await post({
-              url: environment.VITE_API_URL + "/logout",
-            });
-          }}
-          /* auth={{
-            getLoginPayload: async (params) => {
-              return get({
+    <div className="connect__container">
+      <ConnectButton
+        client={client}
+        wallets={wallets}
+        theme={"dark"}
+        connectModal={{ size: "wide" }}
+        showAllWallets={false}
+        recommendedWallets={[wallets[0]]}
+        chain={environment.VITE_ACTIVE_CHAIN === "137" ? polygon : polygonAmoy}
+        onConnect={async (wallet) => {
+          console.log("connected");
+          const activeAccount = wallet.getAccount();
+          let isLoggedIn = await get({
+            url: environment.VITE_API_URL + "/isLoggedIn",
+          });
+          if (activeAccount && polygon) {
+            // check if user is logged in via /isLoggedIn endpoint
+            if (!isLoggedIn) {
+              console.log("Not logged in");
+              // get payload to sign
+              const messagePayload = await get({
                 url: environment.VITE_API_URL + "/login",
                 params: {
-                  address: params.address,
+                  address: activeAccount.address,
+                  // eslint-disable-next-line react/prop-types
                   chainId: polygon.id.toString(),
                 },
               });
-            },
-            doLogin: async (params) => {
+
+              // sign payload
+              const signatureWithPayload = await signLoginPayload({
+                payload: messagePayload,
+                account: activeAccount,
+              });
+
+              // send signed payload to /login endpoint to generate jwt
               await post({
                 url: environment.VITE_API_URL + "/login",
-                params,
+                params: signatureWithPayload,
               });
-            },
-            isLoggedIn: async () => {
-              return await get({
+
+              // verify user is logged in
+              isLoggedIn = await get({
                 url: environment.VITE_API_URL + "/isLoggedIn",
               });
-            },
-            doLogout: async () => {
-              await post({
-                url: environment.VITE_API_URL + "/logout",
-              });
-            },
-          }} */
-        />
-        <SignData polygon={polygon} />
-        <GetUnits />
-        <TransactionTest />
-      </div>
-    </Web3Provider>
+              console.log("Now logged in: ", isLoggedIn);
+            } else {
+              console.log("Logged in");
+            }
+          }
+        }}
+        onDisconnect={async () => {
+          await post({
+            url: environment.VITE_API_URL + "/logout",
+          });
+        }}
+      />
+      <SignData />
+      <GetUnits />
+      <TransactionTest />
+    </div>
   );
 }
 

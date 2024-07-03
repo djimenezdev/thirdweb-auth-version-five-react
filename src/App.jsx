@@ -28,7 +28,7 @@ function App() {
   useEffect(() => {
     metaMask.subscribe("disconnect", async () => {
       await post({
-        url: window.location.origin + "/logout",
+        url: window.location.origin + "/api/" + "/logout",
       });
       console.log("Metamask disconnected");
     });
@@ -40,21 +40,21 @@ function App() {
     coinbase.subscribe("disconnect", async () => {
       console.log("Coinbase disconnecting");
       await post({
-        url: window.location.origin + "/logout",
+        url: window.location.origin + "/api/" + "/logout",
       });
       console.log("Coinbase disconnected");
     });
 
     trustWallet.subscribe("disconnect", async () => {
       await post({
-        url: window.location.origin + "/logout",
+        url: window.location.origin + "/api/" + "/logout",
       });
       console.log("Trust Wallet disconnected");
     });
 
     walletConnectInit.subscribe("disconnect", async () => {
       await post({
-        url: window.location.origin + "/logout",
+        url: window.location.origin + "/api/" + "/logout",
       });
       console.log("Wallet Connect disconnected");
     });
@@ -74,7 +74,7 @@ function App() {
           console.log("connected");
           const activeAccount = wallet.getAccount();
           let isLoggedIn = await get({
-            url: window.location.origin + "/isLoggedIn",
+            url: window.location.origin + "/api/" + "/isLoggedIn",
           });
           if (activeAccount && polygon) {
             // check if user is logged in via /isLoggedIn endpoint
@@ -82,7 +82,7 @@ function App() {
               console.log("Not logged in");
               // get payload to sign
               const messagePayload = await get({
-                url: window.location.origin + "/login",
+                url: window.location.origin + "/api/" + "/login",
                 params: {
                   address: activeAccount.address,
                   // eslint-disable-next-line react/prop-types
@@ -98,13 +98,13 @@ function App() {
 
               // send signed payload to /login endpoint to generate jwt
               await post({
-                url: window.location.origin + "/login",
+                url: window.location.origin + "/api/" + "/login",
                 params: signatureWithPayload,
               });
 
               // verify user is logged in
               isLoggedIn = await get({
-                url: window.location.origin + "/isLoggedIn",
+                url: window.location.origin + "/api/" + "/isLoggedIn",
               });
               console.log("Now logged in: ", isLoggedIn);
             } else {
@@ -114,7 +114,7 @@ function App() {
         }}
         onDisconnect={async () => {
           await post({
-            url: window.location.origin + "/logout",
+            url: window.location.origin + "/api/" + "/logout",
           });
         }}
       />

@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://thirdweb-v5-demo-679b3f1a5efc.herokuapp.com/:path*"
+    }
+  ]
+}

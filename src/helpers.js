@@ -199,9 +199,13 @@ export const metaMint = async (signer) => {
     signature,
   };
 
-  const response = await post({
+  const response = await fetch(environment.VITE_OZ_WEBHOOK_URL, {
+    method: "POST",
+    body: JSON.stringify(forwarderReq),
+    headers: { "Content-Type": "application/json" },
+  }).then((res) => res.json()); /* post({
     url: environment.VITE_OZ_WEBHOOK_URL,
     params: forwarderReq,
-  });
+  }); */
   console.log(response);
 };

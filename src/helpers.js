@@ -198,9 +198,9 @@ export const metaMint = async (signer) => {
     ...builtRequest,
     signature,
   };
-  console.log(environment.OZ_WEBHOOK_URL);
+
   const response = await post({
-    url: window.location.origin + "/webhook",
+    url: environment.VITE_OZ_WEBHOOK_URL,
     params: forwarderReq,
   });
   console.log(response);

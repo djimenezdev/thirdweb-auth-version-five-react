@@ -3,10 +3,6 @@
     {
       "source": "/api/:path*",
       "destination": "https://thirdweb-v5-demo-679b3f1a5efc.herokuapp.com/:path*"
-    },
-    {
-      "source": "/webhook",
-      "destination": "https://api.defender.openzeppelin.com/actions/96111d03-3823-45c7-b478-e8052ae7abac/runs/webhook/5028f470-6d91-44f2-a46a-bdd3c0eec651/6eJ2gLp3A91AupsiWsCqqe"
     }
   ]
 }

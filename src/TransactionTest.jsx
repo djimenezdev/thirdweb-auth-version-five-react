@@ -6,8 +6,7 @@ import {
 import { nftContract } from "./thirdweb";
 import { useActiveAccount } from "thirdweb/react";
 import { useState } from "react";
-import { decodeLogs } from "./helpers";
-import nftABI from "./nftABI.json";
+import { decodeLogs, metaMint } from "./helpers";
 
 const TransactionTest = () => {
   const activeAccount = useActiveAccount();
@@ -25,7 +24,7 @@ const TransactionTest = () => {
       account: activeAccount,
     });
     console.log(receipt);
-    decodeLogs(nftABI, receipt.logs);
+    decodeLogs(receipt.logs);
   };
 
   const tokenURI = async () => {
@@ -39,15 +38,39 @@ const TransactionTest = () => {
 
   return (
     <div className="transactionTest">
-      <h3>TransactionTest</h3>
-      <button onClick={mintNFT}>Mint NFT</button>
-      <input
-        type="text"
-        value={tokenId}
-        onChange={(e) => setTokenId(e.target.value)}
-      />
-      <button onClick={tokenURI}>Get Token URI</button>
-      <p>Token URI: {uri}</p>
+      <div className="transactionTestUI">
+        <div className="transactionTestUI__left">
+          <h3>Mint NFT ---------------&gt;</h3>
+          <div className="tokenIdContainer">
+            <label htmlFor="tokenIdInput">Minted Token ID:</label>
+            <input
+              className="tokenIdInput"
+              type="text"
+              value={tokenId}
+              onChange={(e) => setTokenId(e.target.value)}
+            />
+            <p>Token URI: {uri}</p>
+          </div>
+          <h3>Gasless NFT Mint ---------------&gt;</h3>
+        </div>
+        <div className="transactionTestUI__right">
+          <button className="transactionTestButton tokenMint" onClick={mintNFT}>
+            Mint NFT
+          </button>
+          <button
+            className="transactionTestButton tokenIdSubmit"
+            onClick={tokenURI}
+          >
+            Get Token URI
+          </button>
+          <button
+            className="transactionTestButton gaslessMint"
+            onClick={() => metaMint(activeAccount)}
+          >
+            Mint NFT
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

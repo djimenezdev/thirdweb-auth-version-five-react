@@ -1,8 +1,18 @@
-import { Interface } from "ethers";
-import { parseUnits } from "ethers";
+import { Interface, parseUnits } from "ethers";
+import {
+  estimateGas,
+  getAddress,
+  getContract,
+  prepareTransaction,
+  readContract,
+} from "thirdweb";
 import { checksumAddress } from "thirdweb/utils";
+import { polygon, polygonAmoy } from "thirdweb/chains";
 import { v7 as uuidv7 } from "uuid";
-import { events } from "./signature";
+import { EIP712Domain, ForwardRequest, events } from "./signature";
+import environment from "./environment";
+import { client } from "./thirdweb";
+import nftABI from "./nftABI.json";
 
 export const getListingData = async () => {
   // function returns a set address for the listing data
@@ -64,37 +74,21 @@ export async function post({ url, params, headers }) {
       "Content-Type": "application/json",
       ...headers,
     },
-    body: JSON.stringify(params ?? {}),
+    body: JSON.stringify(params ?? {}, (_, value) =>
+      typeof value === "bigint" ? value.toString() : value
+    ),
     credentials: "include",
   });
 
-  if (!response.ok) {
-    throw new Error(response.statusText);
-  }
-
   return await response.json();
 }
-
-export const signatureMessageFormat = (payload) => {
-  return `${payload.domain} wants you to sign in with your Ethereum account: ${payload.address}
-        
-Please ensure that the domain above matches the URL of the current website.
-
-Version: ${payload.version}
-Chain ID: ${payload.chain_id}
-Nonce: ${payload.nonce}
-Issued At: ${payload.issued_at}
-Expiration Time: ${payload.expiration_time}
-Not Before: ${payload.invalid_before}
-  `;
-};
 
 export const getUnits = (num, decimals = 6) => {
   return parseUnits(num.toString(), decimals);
 };
 
-export const decodeLogs = (abi, logs) => {
-  const interfaceContract = new Interface(abi);
+export const decodeLogs = (logs) => {
+  const interfaceContract = new Interface(nftABI);
 
   Object.values(events).forEach((event) => {
     logs.forEach((log) => {
@@ -107,4 +101,107 @@ export const decodeLogs = (abi, logs) => {
       console.log(decodedLog.toObject());
     });
   });
+};
+
+const mintTransactionData = () => {
+  const mintInterface = new Interface(nftABI);
+  const mintData = mintInterface.encodeFunctionData("mint", []);
+  const transaction = prepareTransaction({
+    to: environment.VITE_TOKEN_ADDRESS,
+    chain: environment.VITE_ACTIVE_CHAIN === "137" ? polygon : polygonAmoy,
+    client: client,
+    data: mintData,
+  });
+  return transaction;
+};
+
+const estimateGasCost = async (transaction, signer) => {
+  return await estimateGas({ transaction, account: signer });
+};
+
+const getAccountForwarderNonce = async (signer) => {
+  const forwarderContract = getContract({
+    chain: environment.VITE_ACTIVE_CHAIN === "137" ? polygon : polygonAmoy,
+    client: client,
+    address: environment.VITE_FORWARDER_ADDRESS,
+  });
+  const getNonce = await readContract({
+    contract: forwarderContract,
+    method: "function nonces(address) view returns (uint256)",
+    params: [signer.address],
+  });
+  return getNonce;
+};
+
+const getMetaTxTypeData = () => {
+  return {
+    types: {
+      EIP712Domain,
+      ForwardRequest,
+    },
+    domain: {
+      name: "DJimenezdev Mint",
+      version: "1",
+      chainId: environment.VITE_ACTIVE_CHAIN,
+      verifyingContract: environment.VITE_FORWARDER_ADDRESS,
+    },
+    primaryType: "ForwardRequest",
+  };
+};
+
+const buildRequest = async (signer) => {
+  // need to prepareTransaction to pass to estimateGasCost
+  const transactionForGasEstimation = mintTransactionData();
+  const gasCost = await estimateGasCost(transactionForGasEstimation, signer); // returns bigInt gwei
+  // fetch nonce from forwarder
+  const nonce = await getAccountForwarderNonce(signer);
+  console.log(nonce);
+  // deadline of 3 minutes
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + 180);
+  const mintInterface = new Interface(nftABI);
+  const mintData = mintInterface.encodeFunctionData("mint", []);
+
+  const request = {
+    from: getAddress(signer.address),
+    to: environment.VITE_TOKEN_ADDRESS,
+    value: BigInt(0),
+    gas: gasCost,
+    nonce: nonce,
+    deadline: deadline,
+    data: mintData,
+  };
+  return request;
+};
+
+const buildTypedData = (request) => {
+  const typeData = getMetaTxTypeData();
+  return { ...typeData, message: request };
+};
+
+export const metaMint = async (signer) => {
+  /* 
+  * Create a function to be called here that estimates gas cost for a mint. Need 
+  to know estimate for signature create a function to be called here 
+
+  * Create a function that puts together the signature request details
+
+  * Create a function to be called here that generates signature that takes passed in 
+    thirdweb signer and signature request details
+
+  * Use post function to send request to meta mint and get a receipt in return that will 
+    be console logged
+  */
+  const builtRequest = await buildRequest(signer);
+  const builtTypedData = buildTypedData(builtRequest);
+  const signature = await signer.signTypedData(builtTypedData);
+  const forwarderReq = {
+    ...builtRequest,
+    signature,
+  };
+  console.log(environment.OZ_WEBHOOK_URL);
+  const response = await post({
+    url: /* window.location.origin + "/webhook" */ environment.VITE_OZ_WEBHOOK_URL,
+    params: forwarderReq,
+  });
+  console.log(response);
 };

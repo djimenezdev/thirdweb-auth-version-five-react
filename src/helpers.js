@@ -195,8 +195,10 @@ export const metaMint = async (signer) => {
   const builtTypedData = buildTypedData(builtRequest);
   const signature = await signer.signTypedData(builtTypedData);
   const forwarderReq = {
-    ...builtRequest,
-    signature,
+    request: {
+      ...builtRequest,
+      signature,
+    },
   };
 
   const response = await fetch(environment.VITE_OZ_WEBHOOK_URL, {

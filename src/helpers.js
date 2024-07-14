@@ -201,7 +201,9 @@ export const metaMint = async (signer) => {
 
   const response = await fetch(environment.VITE_OZ_WEBHOOK_URL, {
     method: "POST",
-    body: JSON.stringify(forwarderReq),
+    body: JSON.stringify(forwarderReq ?? {}, (_, value) =>
+      typeof value === "bigint" ? value.toString() : value
+    ),
     headers: { "Content-Type": "application/json" },
   }).then((res) => res.json()); /* post({
     url: environment.VITE_OZ_WEBHOOK_URL,
